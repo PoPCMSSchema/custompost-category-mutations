@@ -14,7 +14,7 @@ use PoPSchema\CustomPosts\Facades\CustomPostTypeAPIFacade;
 use PoPSchema\CustomPostCategoryMutations\MutationResolvers\MutationInputProperties;
 use PoPSchema\CustomPostCategoryMutations\TypeAPIs\CustomPostCategoryTypeMutationAPIInterface;
 
-abstract class AbstractCustomPostMutationResolverHooks extends AbstractHookSet
+abstract class AbstractCustomPostMutationResolverHookSet extends AbstractHookSet
 {
     protected function init(): void
     {
