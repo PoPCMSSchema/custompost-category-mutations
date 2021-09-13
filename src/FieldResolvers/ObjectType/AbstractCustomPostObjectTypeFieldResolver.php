@@ -4,65 +4,61 @@ declare(strict_types=1);
 
 namespace PoPSchema\CustomPostCategoryMutations\FieldResolvers\ObjectType;
 
-use PoP\ComponentModel\FieldResolvers\ObjectType\AbstractQueryableFieldResolver;
+use PoP\ComponentModel\FieldResolvers\ObjectType\AbstractObjectTypeFieldResolver;
 use PoP\ComponentModel\Schema\SchemaDefinition;
+use PoP\ComponentModel\Schema\SchemaTypeModifiers;
 use PoP\ComponentModel\TypeResolvers\ObjectType\ObjectTypeResolverInterface;
 use PoP\ComponentModel\TypeResolvers\TypeResolverInterface;
-use PoP\Engine\ComponentConfiguration as EngineComponentConfiguration;
-use PoP\Engine\TypeResolvers\ObjectType\RootTypeResolver;
 use PoPSchema\CustomPostCategoryMutations\MutationResolvers\MutationInputProperties;
 
-abstract class AbstractRootFieldResolver extends AbstractQueryableFieldResolver
+abstract class AbstractCustomPostObjectTypeFieldResolver extends AbstractObjectTypeFieldResolver
 {
-    use SetCategoriesOnCustomPostFieldResolverTrait;
+    use SetCategoriesOnCustomPostObjectTypeFieldResolverTrait;
 
     public function getObjectTypeResolverClassesToAttachTo(): array
     {
         return [
-            RootTypeResolver::class,
+            $this->getCustomPostTypeResolverClass(),
         ];
     }
 
     public function getFieldNamesToResolve(): array
     {
-        if (EngineComponentConfiguration::disableRedundantRootTypeMutationFields()) {
-            return [];
-        }
         return [
-            $this->getSetCategoriesFieldName(),
+            'setCategories',
         ];
     }
-
-    abstract protected function getSetCategoriesFieldName(): string;
 
     public function getSchemaFieldDescription(ObjectTypeResolverInterface $objectTypeResolver, string $fieldName): ?string
     {
         $descriptions = [
-            $this->getSetCategoriesFieldName() => sprintf(
-                $this->translationAPI->__('Set categories on a %s', 'custompost-category-mutations'),
+            'setCategories' => sprintf(
+                $this->translationAPI->__('Set categories on the %s', 'custompost-category-mutations'),
                 $this->getEntityName()
-            ),
+            )
         ];
         return $descriptions[$fieldName] ?? parent::getSchemaFieldDescription($objectTypeResolver, $fieldName);
+    }
+
+    public function getSchemaFieldTypeModifiers(ObjectTypeResolverInterface $objectTypeResolver, string $fieldName): ?int
+    {
+        $nonNullableFieldNames = [
+            'setCategories',
+        ];
+        if (in_array($fieldName, $nonNullableFieldNames)) {
+            return SchemaTypeModifiers::NON_NULLABLE;
+        }
+        return parent::getSchemaFieldTypeModifiers($objectTypeResolver, $fieldName);
     }
 
     public function getSchemaFieldArgs(ObjectTypeResolverInterface $objectTypeResolver, string $fieldName): array
     {
         switch ($fieldName) {
-            case $this->getSetCategoriesFieldName():
+            case 'setCategories':
                 $categoryTypeResolverClass = $this->getCategoryTypeResolverClass();
                 /** @var TypeResolverInterface */
                 $categoryTypeResolver = $this->instanceManager->getInstance($categoryTypeResolverClass);
                 return [
-                    [
-                        SchemaDefinition::ARGNAME_NAME => MutationInputProperties::CUSTOMPOST_ID,
-                        SchemaDefinition::ARGNAME_TYPE => SchemaDefinition::TYPE_ID,
-                        SchemaDefinition::ARGNAME_DESCRIPTION => sprintf(
-                            $this->translationAPI->__('The ID of the %s', 'custompost-category-mutations'),
-                            $this->getEntityName()
-                        ),
-                        SchemaDefinition::ARGNAME_MANDATORY => true,
-                    ],
                     [
                         SchemaDefinition::ARGNAME_NAME => MutationInputProperties::CATEGORY_IDS,
                         SchemaDefinition::ARGNAME_TYPE => SchemaDefinition::TYPE_ID,
@@ -84,10 +80,48 @@ abstract class AbstractRootFieldResolver extends AbstractQueryableFieldResolver
         return parent::getSchemaFieldArgs($objectTypeResolver, $fieldName);
     }
 
+    /**
+     * Validated the mutation on the resultItem because the ID
+     * is obtained from the same object, so it's not originally
+     * present in $form_data
+     */
+    public function validateMutationOnResultItem(
+        ObjectTypeResolverInterface $objectTypeResolver,
+        string $fieldName
+    ): bool {
+        switch ($fieldName) {
+            case 'setCategories':
+                return true;
+        }
+        return parent::validateMutationOnResultItem($objectTypeResolver, $fieldName);
+    }
+
+    protected function getFieldArgsToExecuteMutation(
+        array $fieldArgs,
+        ObjectTypeResolverInterface $objectTypeResolver,
+        object $resultItem,
+        string $fieldName
+    ): array {
+        $fieldArgs = parent::getFieldArgsToExecuteMutation(
+            $fieldArgs,
+            $objectTypeResolver,
+            $resultItem,
+            $fieldName
+        );
+        $customPost = $resultItem;
+        switch ($fieldName) {
+            case 'setCategories':
+                $fieldArgs[MutationInputProperties::CUSTOMPOST_ID] = $objectTypeResolver->getID($customPost);
+                break;
+        }
+
+        return $fieldArgs;
+    }
+
     public function resolveFieldMutationResolverClass(ObjectTypeResolverInterface $objectTypeResolver, string $fieldName): ?string
     {
         switch ($fieldName) {
-            case $this->getSetCategoriesFieldName():
+            case 'setCategories':
                 return $this->getTypeMutationResolverClass();
         }
 
@@ -97,7 +131,7 @@ abstract class AbstractRootFieldResolver extends AbstractQueryableFieldResolver
     public function getFieldTypeResolverClass(ObjectTypeResolverInterface $objectTypeResolver, string $fieldName): ?string
     {
         switch ($fieldName) {
-            case $this->getSetCategoriesFieldName():
+            case 'setCategories':
                 return $this->getCustomPostTypeResolverClass();
         }
 
