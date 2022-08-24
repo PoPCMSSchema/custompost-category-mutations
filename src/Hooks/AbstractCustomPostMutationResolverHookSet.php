@@ -26,6 +26,7 @@ abstract class AbstractCustomPostMutationResolverHookSet extends AbstractHookSet
     }
     final protected function getIDScalarTypeResolver(): IDScalarTypeResolver
     {
+        /** @var IDScalarTypeResolver */
         return $this->idScalarTypeResolver ??= $this->instanceManager->getInstance(IDScalarTypeResolver::class);
     }
 
@@ -52,8 +53,8 @@ abstract class AbstractCustomPostMutationResolverHookSet extends AbstractHookSet
     }
 
     /**
-     * @param array<string, InputTypeResolverInterface> $inputFieldNameTypeResolvers
-     * @return array<string, InputTypeResolverInterface>
+     * @param array<string,InputTypeResolverInterface> $inputFieldNameTypeResolvers
+     * @return array<string,InputTypeResolverInterface>
      */
     public function maybeAddInputFieldNameTypeResolvers(
         array $inputFieldNameTypeResolvers,
